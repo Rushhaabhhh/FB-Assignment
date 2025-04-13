@@ -1,10 +1,10 @@
+import sys
 import logging
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-import sys
-import os
 
-from app.api.routes import message_router, conversation_router
+from app.api.routes.message_routes import router as message_router
+from app.api.routes.conversation_routes import router as conversation_router
 from app.controllers.message_controller import MessageController
 from app.controllers.conversation_controller import ConversationController
 from app.db.cassandra_client import cassandra_client
@@ -40,13 +40,15 @@ def get_conversation_controller():
     """Dependency for conversation controller."""
     return ConversationController()
 
-# Update the routes with the dependencies
-message_router.dependency_overrides[MessageController] = get_message_controller
-conversation_router.dependency_overrides[ConversationController] = get_conversation_controller
-
 # Include routers
-app.include_router(message_router)
-app.include_router(conversation_router)
+app.include_router(
+    message_router,
+    dependencies=[Depends(get_message_controller)]
+)
+app.include_router(
+    conversation_router,
+    dependencies=[Depends(get_conversation_controller)]
+)
 
 @app.get("/")
 async def root():
