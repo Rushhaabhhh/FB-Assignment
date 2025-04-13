@@ -1,26 +1,28 @@
 # FB Messenger Backend Implementation with Cassandra
 
-This repository contains the stub code for the Distributed Systems course assignment to implement a Facebook Messenger backend using Apache Cassandra as the distributed database.
+This project is a high-performance messaging backend inspired by Facebook Messenger, built using FastAPI and powered by Apache Cassandra for distributed data storage. Designed for scalability, it efficiently supports large-scale message traffic through well-structured and optimized data models.
 
 ## Architecture
 
-The application follows a typical FastAPI structure:
+The application follows a layered FastAPI structure:
 
-- `app/`: Main application package
-  - `api/`: API routes and endpoints
-  - `controllers/`: Controller logic (stubs provided)
-  - `models/`: Database models (stubs provided, to be implemented by students)
-  - `schemas/`: Pydantic models for request/response validation
-  - `db/`: Database connection utilities (Cassandra client)
+  ```
+app/               // Main application package
+├── api/           // API routes and endpoints
+│   └── routes/    // Routes connection logic
+├── controllers/   // Controller logic
+├── db/            // Database connection utilities
+├── models/        // Database models
+├── schemas/       // Pydantic models for request/response validation
+└── main.py
+```
 
 ## Requirements
 
 - Docker and Docker Compose (for containerized development environment)
 - Python 3.11+ (for local development)
 
-## Quick Setup with Docker
-
-This repository includes a Docker setup to simplify the development process. All you need to get started is:
+## Setup Instructions
 
 1. Clone this repository
 2. Make sure Docker and Docker Compose are installed on your system
@@ -82,30 +84,18 @@ If you prefer not to use Docker, you can set up the environment manually:
 
 ## Cassandra Data Model
 
-For this assignment, you will need to design and implement your own data model in Cassandra to support the required API functionality:
+The application uses these Cassandra tables:
 
-1. Sending messages between users
-2. Retrieving conversations for a user, ordered by most recent activity
-3. Retrieving messages in a conversation, ordered by timestamp
-4. Retrieving messages before a specific timestamp
+- **messages**: Messages stored by conversation_id
+- **messages_by_user**: Messages indexed by user
+- **conversations**: Conversation metadata
+- **conversations_by_user**: Conversations indexed by user
 
-Your data model should consider:
-- Efficient distribution of data across nodes
-- Appropriate partition keys and clustering columns
-- How to handle pagination efficiently
-- How to optimize for the required query patterns
-
-## Assignment Tasks
-
-You need to implement:
-
-1. Cassandra schema design - create tables to support the required queries
-2. Message and Conversation models (`app/models/`) to interact with Cassandra
-3. Controller methods in the stub classes (`app/controllers/`):
-   - Send Message from one user to another (only the DB interaction parts here. No need to implement websocket etc needed to actually deliver message to other user)
-   - Get Recent Conversations of a user (paginated)
-   - Get Messages in a particular conversation (paginated)
-   - Get Messages in a conversation prior to a specific timestamp (paginated)
+This design enables efficient queries for:
+- Fetching conversation messages with pagination
+- Retrieving messages before a specific timestamp
+- Getting a user's conversations
+- Accessing conversation details
 
 ## API Endpoints
 
@@ -120,12 +110,80 @@ You need to implement:
 - `GET /api/conversations/user/{user_id}`: Get all conversations for a user
 - `GET /api/conversations/{conversation_id}`: Get a specific conversation
 
-## Evaluation Criteria
 
-- Correct implementation of all required endpoints
-- Proper error handling and edge cases
-- Efficient Cassandra queries (avoid hotspots and ensure good distribution)
-- Code quality and organization
-- Proper implementation of pagination
-- Performance considerations for distributed systems
-- Adherence to Cassandra data modeling best practices 
+## Database Schema
+
+### Keyspace
+
+```cql
+CREATE KEYSPACE IF NOT EXISTS messenger
+WITH REPLICATION = {
+  'class': 'SimpleStrategy',
+  'replication_factor': 3
+};
+```
+
+### Tables
+
+**Users**
+```cql
+CREATE TABLE IF NOT EXISTS users (
+    user_id uuid,
+    username text,
+    created_at timestamp,
+    PRIMARY KEY (user_id)
+)
+```
+
+**Messages**
+```cql
+CREATE TABLE messages (
+  conversation_id INT,
+  timestamp TIMESTAMP,
+  message_id UUID,
+  sender_id uuid,
+  receiver_id uuid,
+  content TEXT,
+  read_at TIMESTAMP,
+  PRIMARY KEY ((conversation_id), timestamp, message_id)
+) WITH CLUSTERING ORDER BY (timestamp DESC, message_id ASC);
+```
+
+**Messages By User**
+```cql
+CREATE TABLE messages_by_user (
+  user_id uuid,
+  conversation_id INT,
+  timestamp TIMESTAMP,
+  message_id UUID,
+  sender_id uuid,
+  receiver_id uuid,
+  content TEXT,
+  PRIMARY KEY ((user_id), conversation_id, timestamp, message_id)
+) WITH CLUSTERING ORDER BY (conversation_id ASC, timestamp DESC, message_id ASC);
+```
+
+**Conversations**
+```cql
+CREATE TABLE conversations (
+  conversation_id INT,
+  user1_id uuid,
+  user2_id uuid,
+  created_at TIMESTAMP,
+  last_message_at TIMESTAMP,
+  last_message_content TEXT,
+  PRIMARY KEY (conversation_id)
+);
+```
+
+**Conversations By User**
+```cql
+CREATE TABLE conversations_by_user (
+  user_id uuid,
+  conversation_id INT,
+  other_user_id uuid,
+  last_message_at TIMESTAMP,
+  last_message_content TEXT,
+  PRIMARY KEY ((user_id), last_message_at, conversation_id)
+) WITH CLUSTERING ORDER BY (last_message_at DESC, conversation_id ASC);
+```
