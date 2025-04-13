@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from uuid import UUID
 from datetime import datetime
+from typing import List, Optional
+from pydantic import BaseModel, Field
 from app.schemas.message import MessageResponse
 
 class ConversationResponse(BaseModel):
     id: int = Field(..., description="Unique ID of the conversation")
-    user1_id: int = Field(..., description="ID of the first user")
-    user2_id: int = Field(..., description="ID of the second user")
+    user1_id: UUID = Field(..., description="ID of the first user")
+    user2_id: UUID = Field(..., description="ID of the second user")
     last_message_at: datetime = Field(..., description="Timestamp of the last message")
     last_message_content: Optional[str] = Field(None, description="Content of the last message")
 

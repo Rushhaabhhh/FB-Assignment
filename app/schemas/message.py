@@ -1,18 +1,19 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from uuid import UUID
 from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, Field
 
 class MessageBase(BaseModel):
     content: str = Field(..., description="Content of the message")
 
 class MessageCreate(MessageBase):
-    sender_id: int = Field(..., description="ID of the sender")
-    receiver_id: int = Field(..., description="ID of the receiver")
+    sender_id: UUID = Field(..., description="ID of the sender")
+    receiver_id: UUID = Field(..., description="ID of the receiver")
 
 class MessageResponse(MessageBase):
-    id: int = Field(..., description="Unique ID of the message")
-    sender_id: int = Field(..., description="ID of the sender")
-    receiver_id: int = Field(..., description="ID of the receiver")
+    id: UUID = Field(..., description="Unique ID of the message")
+    sender_id: UUID = Field(..., description="ID of the sender")
+    receiver_id: UUID = Field(..., description="ID of the receiver")
     created_at: datetime = Field(..., description="Timestamp when message was created")
     conversation_id: int = Field(..., description="ID of the conversation")
 
